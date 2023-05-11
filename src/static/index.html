@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Пример формы</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .form {
+      text-align: center;
+    }
+
+    .form select,
+    .form input,
+    .form button {
+      margin-bottom: 10px;
+    }
+    .result {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="form">
+    <label for="model">Модель:</label>
+    <select id="model">
+      <option value="option1">large</option>
+      <option value="option2">medium</option>
+    </select>
+
+    <label for="language">Язык:</label>
+    <select id="language">
+      <option value="option1">ru</option>
+      <option value="option2">en</option>
+    </select>
+
+    <input type="text" id="textInput" placeholder="Введите transcribe timeout">
+
+    <button onclick="startTranscribe()" id="startButton">Старт</button>
+    <button onclick="stopTranscribe()" id="stopButton" disabled>Стоп</button>
+
+    <div class="result">
+      <p id="transcriptionOutput"></p>
+    </div>
+
+    <script>
+      let controller;
+
+      function startTranscribe() {
+        var model = document.getElementById("model").value;
+        var language = document.getElementById("language").value;
+        var transcribe_timeout = document.getElementById("textInput").value;
+
+        var data = {
+          model: model,
+          language: language,
+          transcribe_timeout: transcribe_timeout
+        };
+
+        document.getElementById("startButton").disabled = true;
+        document.getElementById("stopButton").disabled = false;
+        document.getElementById("transcriptionOutput").textContent = "Запрос в обработке...";
+
+        controller = new AbortController();
+
+        fetch("/transcribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal
+        })
+        .then(response => response.json())
+        .then(result => {
+          var transcriptionOutput = document.getElementById("transcriptionOutput");
+          transcriptionOutput.textContent = result.transcription;
+          document.getElementById("startButton").disabled = false;
+          document.getElementById("stopButton").disabled = true;
+        })
+        .catch(error => {
+          console.error(error);
+          document.getElementById("transcriptionOutput").textContent = "Ошибка при обработке запроса.";
+          document.getElementById("startButton").disabled = false;
+          document.getElementById("stopButton").disabled = true;
+        });
+      }
+
+      function stopTranscribe() {
+        controller.abort();
+        document.getElementById("startButton").disabled = false;
+        document.getElementById("stopButton").disabled = true;
+        document.getElementById("transcriptionOutput").textContent = "Запрос прерван.";
+      }
+    </script>
+  </div>
+</body>
+</html>

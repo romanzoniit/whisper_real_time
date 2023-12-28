@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.recognition.recoginition import Recognition
+from src.recognition.recognition import Recognition
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates

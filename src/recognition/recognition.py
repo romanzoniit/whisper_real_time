@@ -1,13 +1,12 @@
 import io
 import os
-from time import sleep
+import time
 from datetime import datetime, timedelta
-
 import torch
 import whisper
+import whisper_timestamped
 import speech_recognition as sr
 from tempfile import NamedTemporaryFile
-
 
 from src.utils.microphone import Microphone
 from src.utils.parser_args import args
@@ -17,7 +16,8 @@ class Recognition(Microphone):
     def __init__(self):
         super().__init__()
         self.model = args.model
-        self.audio_model = whisper.load_model(self.model)
+        print(self.model)
+        self.audio_model = whisper_timestamped.load_model(self.model, device="cpu")
         print("Model loaded.\n")
         self.record_timeout = args.record_timeout
         self.phrase_timeout = args.phrase_timeout
@@ -72,9 +72,16 @@ class Recognition(Microphone):
                         f.write(wav_data.read())
 
                     # Read the transcription.
-                    result = self.audio_model.transcribe(self.temp_file, language=args.language, fp16=torch.cuda.is_available())
-                    text = result['text'].strip()
-
+                    s_time = time.time()
+                    print(f"Начало распознавания: {round(s_time, 6)}")
+                    result = whisper_timestamped.transcribe(self.audio_model,
+                                                            self.temp_file,
+                                                            language=args.language,
+                                                            fp16=torch.cuda.is_available())
+                    text = result['text']
+                    e_time = time.time()
+                    print(f"Конец распознавания: {round(e_time, 6)}")
+                    print(f"Time: {round(e_time-s_time, 6)}")
                     # If we detected a pause between recordings, add a new item to our transcripion.
                     # 'Otherwise' edit the existing one.
                     if phrase_complete:
@@ -90,7 +97,6 @@ class Recognition(Microphone):
                     print('', end='', flush=True)
 
                     # Infinite loops are bad for processors, must sleep.
-                    sleep(0.25)
             except KeyboardInterrupt:
                 break
 
@@ -98,8 +104,3 @@ class Recognition(Microphone):
         for line in self.transcription:
             print(line)
         return self.transcription
-
-
-if __name__ == "__main__":
-    rec = Recognition()
-    rec.recognize()
